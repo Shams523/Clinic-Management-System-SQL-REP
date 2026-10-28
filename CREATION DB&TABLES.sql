@@ -1,0 +1,160 @@
+CREATE DATABASE Clinic_Management_System ;
+
+CREATE TABLE SPECIALIZATION
+(
+SPECIALLIZATION_ID     INT PRIMARY KEY IDENTITY(1,1),
+SPECIALLIZATION_NAME    NVARCHAR(50),
+DESCRIPTION             NVARCHAR(100)
+);
+
+CREATE TABLE DOCTOR
+(DOCTOR_ID      INT PRIMARY KEY IDENTITY(1,1),
+FIRST_NAME       NVARCHAR(50) ,
+LAST_NAME        NVARCHAR(50),
+PHONE            NVARCHAR(20),
+EMAIL            NVARCHAR(10),
+HIRE_DATE        DATETIME DEFAULT GETDATE(),
+CONSULTATIONFEE     INT,
+SPECIALLIZATION_ID   INT, 
+
+FOREIGN KEY (SPECIALLIZATION_ID)
+        REFERENCES SPECIALIZATION(SPECIALLIZATION_ID),
+);
+
+
+
+CREATE TABLE PATIENT
+(
+PATIENT_ID      INT PRIMARY KEY IDENTITY(1,1),
+FIRST_NAME       NVARCHAR(50) ,
+LAST_NAME         NVARCHAR(50),
+PHONE             NVARCHAR(20),
+EMAIL             NVARCHAR(10),
+ADDRESS           NVARCHAR(30),
+DATE_OF_BIRTH      DATE DEFAULT GETDATE(),
+GENDER              NCHAR(1)
+);
+
+CREATE TABLE STAFF
+(
+Staff_ID	  INT PRIMARY KEY IDENTITY(1,1),
+FirstName	   NVARCHAR(20),  
+LastName       NVARCHAR(20),	 
+Phone	       NVARCHAR(15), 
+Email	       NVARCHAR(50),
+JobTitle	   NVARCHAR(10), 
+HireDate	   DATETIME DEFAULT GETDATE()
+);
+
+
+CREATE TABLE  APPOINTMENT 
+(
+Appointment_ID 	INT PRIMARY KEY IDENTITY(1,1),
+PatientID        INT ,
+DoctorID          INT	,
+AppointmentDate	  DATE ,
+AppointmentTime	  TIME,
+Status	       NVARCHAR(20),
+Notes	       NVARCHAR(50),
+StaffID          INT,
+ FOREIGN KEY (PatientID)
+        REFERENCES  PATIENT(PATIENT_ID ),
+ FOREIGN KEY (DoctorID )
+            REFERENCES DOCTOR(DOCTOR_ID ),
+ FOREIGN KEY (StaffID )
+          REFERENCES STAFF(Staff_ID)
+);
+
+CREATE TABLE  MEDICALVISIT
+(VisitID      INT PRIMARY KEY IDENTITY(1,1),	 
+AppointmentID  INT ,
+VisitDate	   DATETIME, 
+Symptoms	   NVARCHAR(50),  
+Diagnosis	    NVARCHAR(50),  
+MedicalNotes	  NVARCHAR(50),  
+Recommendations	    NVARCHAR(50),  
+FOREIGN KEY (AppointmentID)
+          REFERENCES APPOINTMENT (Appointment_ID ),
+);
+ 
+ CREATE TABLE PRESCRIPTION 
+ (
+ PrescriptionID  INT PRIMARY KEY IDENTITY(1,1),	
+  VisitID 	    INT,
+PrescriptionDate   DATE,	  
+Instructions	 NVARCHAR(50),
+FOREIGN KEY (VisitID )
+          REFERENCES MEDICALVISIT (VisitID),
+ );
+
+
+CREATE TABLE MEDICINE
+(
+    MedicineID INT PRIMARY KEY,
+    MedicineName NVARCHAR(100),
+    Manufacturer NVARCHAR(100),
+    Price DECIMAL(10, 2),
+    StockQuantity INT,
+    ExpiryDate DATE
+);
+
+
+CREATE TABLE PRESCRIPTIONMEDICINE
+(
+    PrescriptionID INT,
+    MedicineID INT,
+    Dosage NVARCHAR(50),
+    Frequency NVARCHAR(50),
+    Duration NVARCHAR(50),
+    Instructions NVARCHAR(200),
+    CONSTRAINT PK_PRESCRIPTIONMEDICINE
+        PRIMARY KEY (PrescriptionID, MedicineID),
+
+    CONSTRAINT FK_PRESCRIPTIONMEDICINE_PRESCRIPTION
+        FOREIGN KEY (PrescriptionID)
+        REFERENCES PRESCRIPTION(PrescriptionID),
+
+    CONSTRAINT FK_PRESCRIPTIONMEDICINE_MEDICINE
+        FOREIGN KEY (MedicineID)
+        REFERENCES MEDICINE(MedicineID)
+);
+
+
+
+CREATE TABLE PAYMENT
+(
+    PaymentID INT PRIMARY KEY,
+    AppointmentID INT,
+    Amount DECIMAL(10, 2),
+    PaymentDate DATE,
+    PaymentMethod NVARCHAR(50),
+    PaymentStatus NVARCHAR(30),
+    ReferenceNumber NVARCHAR(100),
+
+    CONSTRAINT FK_PAYMENT_APPOINTMENT
+        FOREIGN KEY (AppointmentID)
+        REFERENCES APPOINTMENT(Appointment_ID)
+);
+CREATE TABLE APPOINTMENTHISTORY
+(
+    HistoryID INT PRIMARY KEY,
+    AppointmentID INT,
+    OldStatus NVARCHAR(30),
+    NewStatus NVARCHAR(30),
+    ChangedAt DATETIME,
+    StaffID INT,
+    ChangeReason NVARCHAR(200),
+
+    CONSTRAINT FK_APPOINTMENTHISTORY_APPOINTMENT
+        FOREIGN KEY (AppointmentID)
+        REFERENCES APPOINTMENT(Appointment_ID),
+
+    CONSTRAINT FK_APPOINTMENTHISTORY_STAFF
+        FOREIGN KEY (StaffID)
+        REFERENCES STAFF(Staff_ID)
+);
+
+
+
+
+

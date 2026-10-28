@@ -1,0 +1,126 @@
+TABLES NAME :
+1-DOCTOR                            --الدكتور--
+2-PATIENT                             --المريض--
+3-Specialization                --التخصص--
+4-MEDICIAN                            --الدواء--
+5-Appointment                        --الحجز--
+6-MedicalVisiT                     --الكشف--
+7-Prescription                        الرشته--
+8-PrescriptionMedicine  --ربط الرشته بالدوا ء--
+9-Payment                                  --الدفع--
+10-Staf                                     --الموظف--
+11-AppointmentHistory       --التغير المواعيد--
+
+
+
+--- attributes on tables ---
+
+1. Doctor — الطبيب
+
+DoctorID (PK)
+FirstName	
+LastName	
+Phone	
+Email	
+HireDate	
+ConsultationFee	
+SpecializationID (FK)	
+
+
+
+2. Patient — المريض  
+
+PatientID (PK)	
+FirstName 
+LastName	
+Phone	
+Email	
+Address	
+DateOfBirth	
+Gender  
+
+3. Specialization — التخصص الطبي
+
+SpecializationID (PK)	
+SpecializationName	
+Description	
+
+ 4. Appointment — الموعد
+AppointmentID (PK)	
+PatientID (FK)	
+DoctorID (FK)	
+AppointmentDate	 
+AppointmentTime	 
+Status	 
+Notes	
+StaffID (FK)	
+
+5. MedicalVisit — الزيارة الطبية
+
+VisitID (PK)	 
+AppointmentID (FK)	 
+VisitDate	 
+Symptoms	
+Diagnosis	
+MedicalNotes	 
+Recommendations	
+
+6. Prescription — الروشتة الطبية
+	
+PrescriptionID (PK)	 
+VisitID (FK)	 
+PrescriptionDate	  
+Instructions	 
+
+7. Medicine — الدواء
+
+MedicineID (PK)	 
+MedicineName	 
+Manufacturer	 
+Price	السعر
+StockQuantity	 
+ExpiryDate	  
+
+8. PrescriptionMedicine — أدوية الروشتة
+ده الجدول اللي بيربط الروشتات بالأدوية، وبيحتوي على تفاصيل وصف كل دواء.
+
+PrescriptionID (PK, FK)	 
+MedicineID (PK, FK)	 
+Dosage	الجرعة
+Frequency	  
+Duration	 
+Instructions	  
+
+هنا استخدمنا Composite Primary Key من PrescriptionID وMedicineID كمثال مناسب لو الدواء لا يتكرر مرتين في الروشتة نفسها.
+
+9. Payment — المدفوعات
+
+PaymentID (PK)	
+AppointmentID (FK)	 
+Amount	
+PaymentDate	 
+PaymentMethod	 
+PaymentStatus	 
+ReferenceNumber	  
+
+10. Staff — الموظفون
+
+StaffID (PK)	 
+FirstName	 
+LastName	 
+Phone	 
+Email	
+JobTitle	 
+HireDate	 
+
+11. AppointmentHistory — سجل تغييرات المواعيد
+
+HistoryID (PK)	
+AppointmentID (FK)	 
+OldStatus	 
+NewStatus	 
+ChangedAt	  
+StaffID (FK)	
+ChangeReason	
+
+ 

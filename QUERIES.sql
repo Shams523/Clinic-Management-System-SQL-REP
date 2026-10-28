@@ -1,0 +1,299 @@
+--LEVEL 1--
+SELECT *FROM PATIENT WHERE ADDRESS='Damanhour';
+SELECT * FROM DOCTOR WHERE CONSULTATIONFEE>200;
+SELECT *FROM APPOINTMENT ORDER BY AppointmentDate DESC;
+SELECT * FROM MEDICINE WHERE StockQuantity<100;
+-------------------------------------------------------
+--LEVEL 2--
+SELECT PATIENT.FIRST_NAME AS PATIENTNAME, DOCTOR.FIRST_NAME AS DOCTORNAME , AppointmentDate FROM APPOINTMENT 
+JOIN PATIENT ON PATIENT.PATIENT_ID=APPOINTMENT.PatientID
+JOIN DOCTOR ON DOCTOR.DOCTOR_ID=APPOINTMENT.DoctorID;
+
+SELECT SPECIALIZATION.SPECIALLIZATION_NAME,DOCTOR_ID, FIRST_NAME,EMAIL,HIRE_DATE 
+FROM DOCTOR JOIN SPECIALIZATION ON
+SPECIALIZATION.SPECIALLIZATION_ID=DOCTOR.SPECIALLIZATION_ID;
+
+SELECT MEDICINE.MedicineName, Dosage,Duration FROM PRESCRIPTIONMEDICINE 
+JOIN MEDICINE ON MEDICINE.MedicineID=PRESCRIPTIONMEDICINE.MedicineID
+
+SELECT PATIENT.FIRST_NAME,PaymentStatus FROM PAYMENT
+JOIN PATIENT ON PATIENT.PATIENT_ID= PAYMENT.PaymentID
+
+SELECT * FROM PATIENT LEFT JOIN APPOINTMENT ON 
+APPOINTMENT.PatientID= PATIENT.PATIENT_ID;
+ 
+ ----------------------------------------
+ --LEVEL 3--
+ SELECT AVG(CONSULTATIONFEE) FROM DOCTOR GROUP BY SPECIALLIZATION_ID;
+
+ SELECT COUNT(*)FROM APPOINTMENT GROUP BY DoctorID;
+
+ SELECT  DOCTOR.DOCTOR_ID , DOCTOR.FIRST_NAME,COUNT(*) FROM APPOINTMENT JOIN DOCTOR ON
+ DOCTOR.DOCTOR_ID=APPOINTMENT.DoctorID
+ GROUP BY DOCTOR.DOCTOR_ID ,DOCTOR.FIRST_NAME
+ HAVING COUNT(*)>1;
+
+ SELECT COUNT(*)FROM PRESCRIPTIONMEDICINE GROUP BY MedicineID;
+ 
+ -------------------------------------------------------
+ --LEVEL 4--
+ SELECT AVG(CONSULTATIONFEE)FROM DOCTOR;
+
+ SELECT *FROM DOCTOR WHERE CONSULTATIONFEE>
+ (SELECT AVG(CONSULTATIONFEE)FROM DOCTOR);
+
+  SELECT PATIENT.PATIENT_ID,COUNT(*) AS COU FROM APPOINTMENT JOIN PATIENT 
+ ON PATIENT.PATIENT_ID=APPOINTMENT.Appointment_ID
+ GROUP BY PATIENT.PATIENT_ID HAVING COUNT(*)>1; 
+
+ SELECT
+    D.DOCTOR_ID,
+    D.FIRST_NAME,
+    D.LAST_NAME
+FROM DOCTOR D
+WHERE EXISTS
+(
+    SELECT 1
+    FROM APPOINTMENT A
+    WHERE A.DoctorID = D.DOCTOR_ID
+);
+SELECT
+    Appointment_ID,
+    PatientID,
+    DoctorID,
+    AppointmentDate,
+    Status,
+    CASE
+        WHEN Status = N'Completed' THEN N'Finished'
+        WHEN Status = N'Confirmed' THEN N'Upcoming'
+        WHEN Status = N'Pending' THEN N'Waiting'
+        WHEN Status = N'Cancelled' THEN N'Cancelled'
+        ELSE N'Unknown Status'
+    END AS AppointmentCategory
+FROM APPOINTMENT;
+/********************************/
+--VIEW--
+--view: with out schems binding and indexed view store query and
+--get the result at the run time
+--note : view will be on tha whole db and index on the specifiy table--
+--indexed view :store the actual result so required clusterd index--
+CREATE VIEW dbo.VW_APPOINTMENT_DETAILS
+WITH SCHEMABINDING
+AS
+SELECT Appointment_ID, DOCTOR.FIRST_NAME+ DOCTOR.LAST_NAME AS DOCTOR_FULL_NAME ,
+PATIENT.FIRST_NAME+PATIENT.LAST_NAME AS PATIENT_FULL_NAME,
+AppointmentDate,Status, STAFF.FirstName AS STAFF_NAME
+FROM dbo.APPOINTMENT 
+JOIN dbo.PATIENT ON PATIENT.PATIENT_ID=APPOINTMENT.PatientID
+JOIN dbo.STAFF ON STAFF.Staff_ID=APPOINTMENT.StaffID
+JOIN dbo.DOCTOR ON DOCTOR.DOCTOR_ID=APPOINTMENT.DoctorID
+JOIN dbo.SPECIALIZATION ON
+SPECIALIZATION.SPECIALLIZATION_ID=DOCTOR.SPECIALLIZATION_ID
+GO
+CREATE UNIQUE CLUSTERED INDEX
+    IX_vw_APPOINTEMENTDETAILS
+ON dbo.VW_APPOINTMENT_DETAILS (Appointment_ID)
+GO
+select * from dbo.VW_APPOINTMENT_DETAILS
+---reqular view--
+ALTER VIEW VW_UNPAID_APPOINTMENTS
+AS 
+SELECT Appointment_ID,PatientID,DoctorID,
+AppointmentDate,AppointmentTime,Status,Notes,StaffID
+FROM APPOINTMENT LEFT JOIN PAYMENT ON 
+PAYMENT.AppointmentID=APPOINTMENT.Appointment_ID WHERE 
+PAYMENT.PaymentStatus='PENDING';
+SELECT * FROM VW_UNPAID_APPOINTMENTS;
+--- ANOTHER REGULAR VIEW--
+--SOLVE BY CTE--
+CREATE VIEW VW_DOCTOR_STATISTICS
+AS
+WITH PAYMENT_TOTAL AS
+(
+    SELECT AppointmentID, SUM(Amount) AS TOTAL_PAYMENT
+    FROM PAYMENT
+    GROUP BY AppointmentID
+)
+SELECT
+    D.DOCTOR_ID,
+    D.FIRST_NAME,
+    D.LAST_NAME,
+    COUNT(A.Appointment_ID) AS NUMBER_APPOINTMENTS_DOCTOR,
+    AVG(D.CONSULTATIONFEE) AS AVG_CONSULTATIONFEE,
+    SUM(ISNULL(PT.TOTAL_PAYMENT, 0)) AS TOTAL_PAYMENTS
+FROM DOCTOR D
+LEFT JOIN APPOINTMENT A
+    ON D.DOCTOR_ID = A.DoctorID
+LEFT JOIN PAYMENT_TOTAL PT
+    ON A.Appointment_ID = PT.AppointmentID
+GROUP BY
+    D.DOCTOR_ID,
+    D.FIRST_NAME,
+    D.LAST_NAME;
+
+SELECT * FROM VW_DOCTOR_STATISTICS
+--------------- FUNCTIONS returns variable--------------------
+CREATE FUNCTION FN_COUNT_DOCTOR_APPOINTMENTS(@DoctorID INT)
+RETURNS INT
+AS
+BEGIN
+    DECLARE @AppointmentCount INT;
+
+    SELECT @AppointmentCount = COUNT(*)
+    FROM APPOINTMENT
+    WHERE DoctorID = @DoctorID;
+
+    RETURN @AppointmentCount;
+END;
+---call function throw this way--
+DECLARE @COU INT
+SELECT @COU= DBO.FN_COUNT_DOCTOR_APPOINTMENTS (2);
+select @COU
+--or this way--
+SELECT dbo.FN_COUNT_DOCTOR_APPOINTMENTS(2);
+
+CREATE FUNCTION FN_GET_APPOINTMENT_PAYMENT(@APPOINTID INT )
+RETURNS INT
+AS
+BEGIN
+DECLARE @AMOUNT INT 
+ SELECT @AMOUNT=  AMOUNT FROM  PAYMENT JOIN APPOINTMENT ON 
+APPOINTMENT.Appointment_ID= PAYMENT.AppointmentID
+WHERE APPOINTMENT.Appointment_ID=@APPOINTID AND PAYMENT.PaymentStatus='Paid'
+return @AMOUNT
+END;
+
+SELECT DBO.FN_GET_APPOINTMENT_PAYMENT(3);
+---FUNCTION RETURN TABLE---
+CREATE FUNCTION  FN_PATIENT_APPOINTMENTS 
+(  @PATIENTID INT )
+RETURNS TABLE
+AS
+RETURN(
+SELECT Appointment_ID, AppointmentDate, Status 
+FROM APPOINTMENT WHERE PatientID=@PATIENTID
+)
+SELECT * FROM DBO.FN_PATIENT_APPOINTMENTS (2);
+---STORED PROCEDURE(SP)-----
+CREATE PROCEDURE SP_GET_PATIENT_APPOINTMENTS @ID INT
+AS
+BEGIN
+    IF EXISTS (   SELECT 1   FROM PATIENT   WHERE PATIENT_ID = @ID )
+    BEGIN
+        SELECT * FROM APPOINTMENT WHERE PatientID = @ID;
+    END
+    ELSE
+    BEGIN
+        SELECT 'THIS PATIENT DOES NOT EXIST IN THIS DB OR INVALID ID' AS MESSAGE;
+    END
+END;
+EXECUTE SP_GET_PATIENT_APPOINTMENTS @ID=20;
+
+CREATE PROCEDURE SP_ADD_APPOINTMENT
+    @PATIENTID INT,
+    @DOCTORID INT
+AS
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM PATIENT
+        WHERE PATIENT_ID = @PATIENTID
+    )
+    BEGIN
+        IF EXISTS (
+            SELECT 1
+            FROM DOCTOR
+            WHERE DOCTOR_ID = @DOCTORID
+        )
+        BEGIN
+            INSERT INTO APPOINTMENT
+            (
+                PatientID,
+                DoctorID,
+                AppointmentDate,
+                AppointmentTime,
+                Status,
+                Notes,
+                StaffID
+            )
+            VALUES
+            (
+                @PATIENTID,
+                @DOCTORID,
+                '2026-10-30',
+                '10:30:00',
+                'Pending',
+                'Patient complains of headache',
+                1
+            );
+
+            SELECT 'Appointment added successfully' AS MESSAGE;
+        END
+        ELSE
+        BEGIN
+            SELECT 'Doctor does not exist' AS MESSAGE;
+        END
+    END
+    ELSE
+    BEGIN
+        SELECT 'Patient does not exist' AS MESSAGE;
+    END
+END;
+execute SP_ADD_APPOINTMENT
+    @PATIENTID= 2,
+    @DOCTORID =22
+
+    ---trigger--
+    ALTER TABLE PRESCRIPTIONMEDICINE
+ADD Quantity INT NOT NULL
+    CONSTRAINT DF_PM_QUANTITY DEFAULT 1;
+    
+CREATE OR ALTER TRIGGER TR_UPDATE_MEDICINE_STOCK
+ON PRESCRIPTIONMEDICINE
+AFTER INSERT, UPDATE, DELETE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @CHANGES TABLE
+    (
+        MedicineID INT PRIMARY KEY,
+        QuantityChange INT
+    );
+
+    INSERT INTO @CHANGES (MedicineID, QuantityChange)
+    SELECT MedicineID, SUM(QuantityChange)
+    FROM
+    (
+        SELECT MedicineID, Quantity AS QuantityChange
+        FROM INSERTED
+
+        UNION ALL
+
+        SELECT MedicineID, -Quantity AS QuantityChange
+        FROM DELETED
+    ) AS CHANGES
+    GROUP BY MedicineID
+    HAVING SUM(QuantityChange) <> 0;
+
+    IF EXISTS
+    (
+        SELECT 1
+        FROM MEDICINE M
+        JOIN @CHANGES C
+            ON M.MedicineID = C.MedicineID
+        WHERE M.StockQuantity < C.QuantityChange
+          AND C.QuantityChange > 0
+    )
+    BEGIN
+        ROLLBACK TRANSACTION;
+        THROW 50002, 'Not enough medicine stock.', 1;
+    END;
+
+    UPDATE M
+    SET M.StockQuantity = M.StockQuantity - C.QuantityChange
+    FROM MEDICINE M
+    JOIN @CHANGES C
+        ON M.MedicineID = C.MedicineID;
+END;
+
